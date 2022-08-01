@@ -1,0 +1,10 @@
+[redhat]
+RockyAsl        ansible_host=192.168.56.102
+
+[debian]
+ubuntuasl       ansible_host=192.168.56.103
+
+[linux:children]
+redhat
+debian
+
