@@ -1,0 +1,63 @@
+---
+- name: ejercicio
+  hosts: all
+  remote_user: ansible
+  become: true
+  become_method: sudo
+
+  vars_files:
+
+    - vars/default.yml
+
+  tasks:
+      - name: Instalar ultima version de los paquetes solicitados
+        apt: 
+          name: "{{ packages }}"
+      	  update_cache: yes
+          state: latest
+        when: ansible_os_family == "Debian"
+        notify: reiniciar servidor
+
+#     	configuracion y creacion de un virtual host
+
+      - name: Crear carpetas
+        file:
+          path: "/var/www/{{ http_host }}"
+          state: directory
+          owner: "{{ app_user }}"
+          mode: '0755'
+
+      - name: copiar archivo index
+        template:
+          src: "templates/index.html.j2"
+          dest: "/var/www/{{ http_host }}/index.html"
+
+      - name: crear virtual host
+        template:
+          src: "templates/apache.conf.j2"
+          dest: "/etc/apache2/sites-available/{{ http_conf }}"
+        notify: reiniciar servidor
+
+      - name: permitir el protocolo tcp en el puerto
+        ufw:
+          rule: allow
+          port: "{{ http_port }}"
+          proto: tcp
+
+# configuracion de postfix
+
+      - name: crear archivo de configuracion de postfix
+        template:
+          src: "templates/postfix-main.j2"
+          dest: /etc/postfix/main.cf
+        notify: reiniciar postfix
+
+
+
+    #handlers:
+
+     # - name: reiniciar servidor
+     #   service:
+      #    name: apache2
+       #   state: restarted
+
