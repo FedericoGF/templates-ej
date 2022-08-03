@@ -70,6 +70,12 @@
       when: ansible_os_family == "Debian" 
       notify: reiniciar dovecot
   
+    - name: instalar squirrel
+      shell: "{{ item }}" 
+      loop: "{{ instalar }}"
+
+# Reiniciar servicios
+
   handlers:
 
   - name: reiniciar servidor
