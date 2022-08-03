@@ -7,57 +7,85 @@
 
   vars_files:
 
-    - vars/default.yml
+    - ../vars/default.yml
 
   tasks:
-      - name: Instalar ultima version de los paquetes solicitados
-        apt: 
-          name: "{{ packages }}"
-      	  update_cache: yes
-          state: latest
-        when: ansible_os_family == "Debian"
-        notify: reiniciar servidor
+    - name: Instalar ultima version de los paquetes solicitados
+      apt: 
+        name: "{{ packages }}"
+        update_cache: yes
+        state: latest
+      when: ansible_os_family == "Debian"
+      notify: reiniciar servidor
 
-#     	configuracion y creacion de un virtual host
+#     configuracion y creacion de un virtual host
 
-      - name: Crear carpetas
-        file:
-          path: "/var/www/{{ http_host }}"
-          state: directory
-          owner: "{{ app_user }}"
-          mode: '0755'
+    - name: Crear carpetas
+      file:
+        path: "/var/www/{{ http_host }}"
+        state: directory
+        mode: '0755'
+      when: ansible_os_family == "Debian"
 
-      - name: copiar archivo index
-        template:
-          src: "templates/index.html.j2"
-          dest: "/var/www/{{ http_host }}/index.html"
+# copiar el archivo index
 
-      - name: crear virtual host
-        template:
-          src: "templates/apache.conf.j2"
-          dest: "/etc/apache2/sites-available/{{ http_conf }}"
-        notify: reiniciar servidor
+    - name: copiar archivo index
+      template:
+        src: "../templates/index.html.j2"
+        dest: "/var/www/{{ http_host }}/index.html"
+      when: ansible_os_family == "Debian"
 
-      - name: permitir el protocolo tcp en el puerto
-        ufw:
-          rule: allow
-          port: "{{ http_port }}"
-          proto: tcp
+# creacion del virtual host
+
+    - name: crear virtual host
+      template:
+        src: "../templates/apache.conf.j2"
+        dest: "/etc/apache2/sites-available/{{ http_conf }}"
+      when: ansible_os_family == "Debian"   
+      notify: reiniciar servidor
+
+    - name: permitir el protocolo tcp en el puerto
+      ufw:
+        rule: allow
+        port: "{{ http_port }}"
+        proto: tcp
+      when: ansible_os_family == "Debian"
 
 # configuracion de postfix
 
-      - name: crear archivo de configuracion de postfix
-        template:
-          src: "templates/postfix-main.j2"
-          dest: /etc/postfix/main.cf
-        notify: reiniciar postfix
+    - name: crear archivo de configuracion de postfix
+      template:
+        src: "../templates/postfix-main.cf.j2"
+        dest: /etc/postfix/main.cf
+      when: ansible_os_family == "Debian" 
+      notify: reiniciar postfix
 
+# configuracion de dovecot mail
 
+    - name: configuracion de dovecot mail 
+      copy:
+        src: ../templates//10-mail.conf
+        dest: /etc/dovecot/conf.d/10-mail.conf
+        mode: 0644
+      when: ansible_os_family == "Debian" 
+      notify: reiniciar dovecot
+  
+  handlers:
 
-    #handlers:
+  - name: reiniciar servidor
+    service:
+      name: apache2
+      state: restarted
 
-     # - name: reiniciar servidor
-     #   service:
-      #    name: apache2
-       #   state: restarted
+  - name: reiniciar postfix
+    service:
+      name: postfix
+      state: restarted
+      enabled: yes 
+
+  - name: reiniciar dovecot
+    service:
+      name: dovecot-core
+      state: restarted
+      enabled: yes       
 
